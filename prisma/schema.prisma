@@ -14,7 +14,9 @@ model Tenant {
   name         String
   logoUrl      String?
   primaryColor String   @default("#000000")
+  isActive     Boolean  @default(true)
   
+  // Связи
   categories   Category[]
   products     Product[]
   orders       Order[]
@@ -27,14 +29,14 @@ model Tenant {
 model Category {
   id       String    @id @default(cuid())
   name     String
-  slug     String?   // Сделали опциональным, чтобы не ломать старые записи
+  slug     String?   // Сделали опциональным для совместимости
+  order    Int       @default(0)
   
-  // Связь с товарами
-  products Product[]
-
-  // Связь с арендатором (делаем опциональной для совместимости)
+  // Связь с арендатором (опционально, чтобы не ломать старый код)
   tenantId String?
   tenant   Tenant?    @relation(fields: [tenantId], references: [id])
+  
+  products Product[]
 }
 
 // 3. Товары
@@ -42,23 +44,49 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String?
-  price       Int      // Используем Int для цены (в копейках или рублях)
+  price       Int      // Цена в рублях (целое число)
   
-  // !!! ВОТ ЭТИ ПОЛЯ, КОТОРЫХ НЕ ХВАТАЛО !!!
-  weight      String?  // Вес (например, "350 г")
-  image       String?  // Ссылка на фото
-  createdAt   DateTime @default(now()) // Дата создания (для сортировки)
+  // Поля, которых не хватало
+  weight      String?  
+  image       String?
+  createdAt   DateTime @default(now())
   
   isAvailable Boolean  @default(true)
+  badge       String?
   
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
   
   tenantId    String?
   tenant      Tenant?   @relation(fields: [tenantId], references: [id])
+  
+  modifierGroups ModifierGroup[]
 }
 
-// 4. Заказы
+// 4. Группы модификаторов
+model ModifierGroup {
+  id           String   @id @default(cuid())
+  name         String
+  minSelection Int      @default(0)
+  maxSelection Int      @default(1)
+  
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  
+  modifiers    Modifier[]
+}
+
+// 5. Модификаторы
+model Modifier {
+  id              String        @id @default(cuid())
+  name            String
+  price           Int           @default(0)
+  
+  modifierGroupId String
+  modifierGroup   ModifierGroup @relation(fields: [modifierGroupId], references: [id])
+}
+
+// 6. Заказы
 model Order {
   id            String      @id @default(cuid())
   status        String      @default("PENDING")
@@ -71,5 +99,18 @@ model Order {
   tenantId      String?
   tenant        Tenant?      @relation(fields: [tenantId], references: [id])
   
+  items         OrderItem[]
   createdAt     DateTime    @default(now())
+}
+
+// 7. Позиции заказа
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id])
+  
+  productName String
+  quantity    Int
+  price       Int
+  modifiers   String?
 }

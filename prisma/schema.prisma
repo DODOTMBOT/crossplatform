@@ -17,16 +17,17 @@ model Tenant {
   isActive     Boolean  @default(true)
   
   // Связи
-  users        User[]   // <--- НОВОЕ: Администраторы ресторана
+  users        User[]   // Администраторы ресторана
   categories   Category[]
   products     Product[]
   orders       Order[]
+  banners      Banner[] // Баннеры ресторана
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
 
-// 2. Пользователи (Администраторы) --- НОВАЯ МОДЕЛЬ ---
+// 2. Пользователи (Администраторы)
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -147,4 +148,17 @@ model OrderItem {
   quantity    Int
   price       Int
   modifiers   String?
+}
+
+// 9. Баннеры (Слайдер на главной)
+model Banner {
+  id        String   @id @default(cuid())
+  image     String   // Ссылка на фото
+  link      String?  // Ссылка куда ведет (опционально)
+  sortIndex Int      @default(0)
+  
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
 }

@@ -64,26 +64,37 @@ model Product {
   description String?
   price       Int      // Цена в рублях
   
-  // Статусы
-  isAvailable Boolean  @default(true) // Активен
-  isArchived  Boolean  @default(false) // В архиве
-  sortIndex   Int      @default(0)     // Сортировка
-  badge       String?  // Хит, Новинка и т.д.
-
-  // Характеристики
-  weight        String?  // Вес (300 г)
-  image         String?
+  // --- НОВЫЕ ПОЛЯ (по вашему списку) ---
   
-  // КБЖУ
+  // 1. Признак расчета (Товар, Подакцизный, Услуга)
+  // Храним значения: "COMMODITY" (Товар), "EXCISE" (Подакцизный), "SERVICE" (Услуга)
+  paymentSubject String @default("COMMODITY") 
+
+  // 2. Вес ИЛИ Объем
+  weight        String?  // Вес (например: "300 г")
+  volume        String?  // Объем (например: "0.5 л") - НОВОЕ ПОЛЕ
+
+  // 3. Медиа
+  image         String?  // Фото
+  video         String?  // Видео (ссылка) - НОВОЕ ПОЛЕ
+
+  // 4. КБЖУ
   calories      Float? 
   proteins      Float?
   fats          Float?
   carbohydrates Float?
 
-  // Технические
+  // Статусы и сортировка
+  isAvailable Boolean  @default(true) // Активен
+  isArchived  Boolean  @default(false) // В архиве
+  sortIndex   Int      @default(0)     // Сортировка
+  badge       String?  // Хит, Новинка и т.д.
+
+  // Технические поля
   sku           String? // Артикул
   iikoId        String? // ID в iiko
   isMarked      Boolean @default(false) // Честный знак
+  // ------------------
 
   // Связи
   categoryId  String

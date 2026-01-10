@@ -3,62 +3,70 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-interface Banner {
-  id: string;
-  image: string;
-  link: string | null;
-}
+import { Banner } from "@prisma/client";
 
 export default function HeroSlider({ banners }: { banners: Banner[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Если баннеров нет, компонент ничего не рисует
   if (!banners || banners.length === 0) return null;
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
       const { current } = scrollRef;
-      // Скроллим на 300px (примерная ширина баннера)
-      const scrollAmount = direction === "left" ? -320 : 320;
+      
+      // Ширина карточки (300px) + отступ (24px) = ~325px
+      const scrollAmount = direction === "left" ? -325 : 325;
+      
       current.scrollBy({ left: scrollAmount, behavior: "smooth" });
     }
   };
 
-  // Показываем управление только если баннеров много
-  const showControls = banners.length > 4;
+  const showControls = banners.length > 3;
 
   return (
-    <div className="relative group container mx-auto px-4 mt-8 mb-10">
+    // -mx-4 позволяет контейнеру чуть выйти за границы основного контента на мобильных, 
+    // чтобы скролл был от края до края, но при этом px-8 внутри компенсирует это.
+    <div className="relative group container mx-auto mt-24 mb-6">
       
       {/* Кнопка "Влево" */}
       {showControls && (
         <button 
           onClick={() => scroll("left")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white shadow-lg border border-gray-100 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 -ml-2 hover:scale-110 hidden md:block"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white/90 backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-gray-100 p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 hidden md:block"
         >
-          <ChevronLeft className="w-5 h-5 text-gray-700" />
+          <ChevronLeft className="w-6 h-6 text-gray-800" />
         </button>
       )}
 
       {/* Контейнер слайдов */}
       <div 
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory py-2"
-        style={{ scrollbarWidth: "none" }} // Скрываем скроллбар для Firefox
+        // ИЗМЕНЕНИЯ:
+        // 1. py-12: Достаточный отступ сверху/снизу для мягкой тени
+        // 2. px-8: Отступ слева/справа ВНУТРИ скролла, чтобы крайние тени не обрезались контейнером
+        className="flex gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory py-12 px-20"
+        style={{ scrollbarWidth: "none" }} 
       >
         {banners.map((banner) => (
           <div 
             key={banner.id} 
-            className="flex-shrink-0 snap-center relative rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer w-[280px] h-[160px] md:w-[350px] md:h-[200px]"
+            // ИЗМЕНЕНИЯ В СТИЛЯХ КАРТОЧКИ:
+            // 1. shadow-[0_8px_30px_rgb(0,0,0,0.04)] — очень мягкая, рассеянная тень
+            // 2. hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] — чуть темнее при наведении
+            // 3. border-transparent — убрал серую рамку, чтобы не мешала мягкости (или сделал её очень тонкой если нужно)
+            className="flex-shrink-0 snap-start relative rounded-[2rem] overflow-hidden 
+                       shadow-[0_8px_30px_rgb(0,0,0,0.04)] 
+                       hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] 
+                       transition-all duration-500 cursor-pointer border border-gray-100/50
+                       w-[220px] h-[320px] 
+                       md:w-[300px] md:h-[420px]"
           >
-            {/* Если есть ссылка - оборачиваем в Link, иначе просто картинка */}
             {banner.link ? (
               <Link href={banner.link} className="block w-full h-full">
                 <img 
                   src={banner.image} 
                   alt="Promo" 
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                 />
               </Link>
             ) : (
@@ -76,9 +84,9 @@ export default function HeroSlider({ banners }: { banners: Banner[] }) {
       {showControls && (
         <button 
           onClick={() => scroll("right")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white shadow-lg border border-gray-100 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 -mr-2 hover:scale-110 hidden md:block"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-white/90 backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-gray-100 p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 hidden md:block"
         >
-          <ChevronRight className="w-5 h-5 text-gray-700" />
+          <ChevronRight className="w-6 h-6 text-gray-800" />
         </button>
       )}
     </div>

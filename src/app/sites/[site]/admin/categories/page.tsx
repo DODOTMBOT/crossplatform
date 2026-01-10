@@ -1,18 +1,32 @@
 import { createCategory, deleteCategory, getCategories } from "@/app/actions/categories";
+import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash } from "lucide-react";
+import { notFound } from "next/navigation";
 
-export default async function AdminCategoriesPage() {
-  const categories = await getCategories();
+// Получаем параметры страницы (slug сайта)
+export default async function AdminCategoriesPage({ params }: { params: Promise<{ site: string }> }) {
+  const { site } = await params;
+
+  // 1. Находим текущий ресторан
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug: site }
+  });
+
+  if (!tenant) return notFound();
+
+  // 2. Передаем ID ресторана в функцию получения категорий
+  const categories = await getCategories(tenant.id);
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Категории</h1>
+      <h1 className="text-3xl font-bold">Категории: {tenant.name}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
         {/* Форма создания */}
         <Card>
           <CardHeader>
@@ -20,6 +34,9 @@ export default async function AdminCategoriesPage() {
           </CardHeader>
           <CardContent>
             <form action={createCategory} className="flex flex-col gap-4">
+              {/* ВАЖНО: Скрытое поле с ID ресторана */}
+              <input type="hidden" name="tenantId" value={tenant.id} />
+              
               <Input name="name" placeholder="Название (например: Супы)" required />
               <Button type="submit">Создать</Button>
             </form>

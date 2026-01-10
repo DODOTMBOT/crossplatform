@@ -9,14 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 
-// Интерфейс для категорий (чтобы TypeScript не ругался)
+// Интерфейс для категорий
 interface Category {
   id: string;
   name: string;
 }
 
-export default function CreateProductForm({ categories }: { categories: Category[] }) {
-  // Храним ВСЕ данные в состоянии, чтобы они не пропадали при переключении табов
+export default function CreateProductForm({ categories, tenantId }: { categories: Category[], tenantId: string }) {
+  // Храним данные формы в состоянии
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -37,7 +37,6 @@ export default function CreateProductForm({ categories }: { categories: Category
     isMarked: false,
   });
 
-  // Функция для обновления полей
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -46,21 +45,24 @@ export default function CreateProductForm({ categories }: { categories: Category
     <div className="bg-white p-5 rounded-xl border shadow-sm h-full">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Добавить/Изменить</h2>
-        {/* Индикатор статуса */}
         <div className={`px-2 py-1 rounded text-xs font-bold ${formData.isAvailable ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
           {formData.isAvailable ? "В МЕНЮ" : "СКРЫТО"}
         </div>
       </div>
 
       <form action={createProduct}>
-        {/* === ВАЖНО: Скрытые инпуты для отправки данных на сервер === 
-            Они находятся вне табов, поэтому данные всегда отправятся */}
+        {/* === ВАЖНО: Скрытые инпуты === */}
+        
+        {/* 1. Передаем ID ресторана (Самое главное!) */}
+        <input type="hidden" name="tenantId" value={tenantId} />
+
+        {/* 2. Передаем все поля из состояния */}
         {Object.entries(formData).map(([key, value]) => (
            <input key={key} type="hidden" name={key} value={String(value)} />
         ))}
-        {/* Хак для чекбоксов, так как "false" строкой не всегда корректно парсится, но наш Action справится */}
+        
+        {/* 3. Хак для чекбокса маркировки */}
         <input type="hidden" name="isMarkedValue" value={formData.isMarked ? "on" : ""} />
-
 
         <Tabs defaultValue="main" className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-4">

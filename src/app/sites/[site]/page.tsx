@@ -17,9 +17,7 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
     where: { slug: site },
   });
 
-  if (!tenant) {
-    return notFound();
-  }
+  if (!tenant) return notFound();
 
   const banners = await prisma.banner.findMany({
     where: { tenantId: tenant.id },
@@ -51,24 +49,28 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
 
       <CategoryNav categories={activeCategories} />
 
-      <div className="container mx-auto px-4 mt-8 space-y-12">
-        <h1 className="text-3xl font-bold text-center mb-8">{tenant.name}</h1>
+      {/* Основной контейнер с отступами, задающий сетку */}
+      <div className="container mx-auto px-4 mt-12 space-y-16">
+        
+        {/* Название ресторана - СЛЕВА (убрал text-center) */}
+        <h1 className="text-4xl font-bold text-[#1C1C1C] mb-8">
+          {tenant.name}
+        </h1>
         
         {activeCategories.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
+          <div className="py-20 text-gray-500">
             <p>Меню пока пустое 😔</p>
             <p className="text-sm">Зайдите в админку и создайте товары.</p>
           </div>
         ) : (
           activeCategories.map((category: CategoryWithProducts) => (
             <section key={category.id} id={category.id} className="scroll-mt-32">
-              {/* ИСПРАВЛЕНИЕ: Жесткое центрирование через Flexbox */}
-              <div className="flex justify-center w-full mb-6">
-                 <h2 className="text-3xl font-bold text-[#1C1C1C]">
-                    {category.name}
-                 </h2>
-              </div>
               
+              {/* Заголовок категории - СЛЕВА (убрал flex justify-center и text-center) */}
+              <h2 className="text-3xl font-bold mb-8 text-[#1C1C1C]">
+                {category.name}
+              </h2>
+
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
                 {category.products.map((product) => (
                   <ProductCard

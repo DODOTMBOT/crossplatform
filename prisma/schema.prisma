@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Арендатор (Владелец заведения)
+// 1. Арендатор
 model Tenant {
   id           String   @id @default(cuid())
   slug         String   @unique
@@ -16,31 +16,25 @@ model Tenant {
   primaryColor String   @default("#000000")
   isActive     Boolean  @default(true)
   
-  // Связи
-  users        User[]   // Администраторы ресторана
+  users        User[]
   categories   Category[]
   products     Product[]
   orders       Order[]
-  banners      Banner[] // Баннеры ресторана
+  banners      Banner[]
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
 
-// 2. Пользователи (Администраторы)
+// 2. Пользователи
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String   // Хэшированный пароль
+  password  String
   name      String?
-  
-  // Роль: "ADMIN" (ресторатор) или "SUPERADMIN" (владелец платформы)
   role      String   @default("ADMIN") 
-
-  // Привязка к ресторану (если null — значит это Супер-Админ платформы)
   tenantId  String?
   tenant    Tenant?  @relation(fields: [tenantId], references: [id])
-
   createdAt DateTime @default(now())
 }
 
@@ -50,10 +44,8 @@ model Category {
   name     String
   slug     String?   
   order    Int       @default(0)
-  
   tenantId String?
   tenant   Tenant?    @relation(fields: [tenantId], references: [id])
-  
   products Product[]
 }
 
@@ -64,19 +56,17 @@ model Product {
   description String?
   price       Int      // Цена в рублях
   
-  // --- НОВЫЕ ПОЛЯ (по вашему списку) ---
-  
-  // 1. Признак расчета (Товар, Подакцизный, Услуга)
-  // Храним значения: "COMMODITY" (Товар), "EXCISE" (Подакцизный), "SERVICE" (Услуга)
+  // --- НОВЫЕ ПОЛЯ ---
+  // 1. Признак расчета: "COMMODITY" (Товар), "EXCISE" (Подакциз), "SERVICE" (Услуга)
   paymentSubject String @default("COMMODITY") 
 
   // 2. Вес ИЛИ Объем
-  weight        String?  // Вес (например: "300 г")
-  volume        String?  // Объем (например: "0.5 л") - НОВОЕ ПОЛЕ
+  weight        String?  // "300 г"
+  volume        String?  // "0.5 л"
 
   // 3. Медиа
-  image         String?  // Фото
-  video         String?  // Видео (ссылка) - НОВОЕ ПОЛЕ
+  image         String?  // Ссылка на фото (загруженное)
+  video         String?  // Ссылка на видео (YouTube/URL)
 
   // 4. КБЖУ
   calories      Float? 
@@ -84,25 +74,20 @@ model Product {
   fats          Float?
   carbohydrates Float?
 
-  // Статусы и сортировка
-  isAvailable Boolean  @default(true) // Активен
-  isArchived  Boolean  @default(false) // В архиве
-  sortIndex   Int      @default(0)     // Сортировка
-  badge       String?  // Хит, Новинка и т.д.
-
-  // Технические поля
-  sku           String? // Артикул
-  iikoId        String? // ID в iiko
-  isMarked      Boolean @default(false) // Честный знак
-  // ------------------
+  // Статусы
+  isAvailable Boolean  @default(true)
+  isArchived  Boolean  @default(false)
+  sortIndex   Int      @default(0)
+  badge       String?
+  sku           String?
+  iikoId        String?
+  isMarked      Boolean @default(false)
 
   // Связи
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
-  
   tenantId    String?
   tenant      Tenant?   @relation(fields: [tenantId], references: [id])
-  
   modifierGroups ModifierGroup[]
 
   createdAt   DateTime @default(now())
@@ -115,10 +100,8 @@ model ModifierGroup {
   name         String
   minSelection Int      @default(0)
   maxSelection Int      @default(1)
-  
   productId    String
   product      Product  @relation(fields: [productId], references: [id])
-  
   modifiers    Modifier[]
 }
 
@@ -127,7 +110,6 @@ model Modifier {
   id              String        @id @default(cuid())
   name            String
   price           Int           @default(0)
-  
   modifierGroupId String
   modifierGroup   ModifierGroup @relation(fields: [modifierGroupId], references: [id])
 }
@@ -137,14 +119,11 @@ model Order {
   id            String      @id @default(cuid())
   status        String      @default("PENDING")
   totalAmount   Int
-  
   customerName  String
   customerPhone String
   address       String?
-  
   tenantId      String?
   tenant        Tenant?      @relation(fields: [tenantId], references: [id])
-  
   items         OrderItem[]
   createdAt     DateTime    @default(now())
 }
@@ -154,22 +133,19 @@ model OrderItem {
   id          String  @id @default(cuid())
   orderId     String
   order       Order   @relation(fields: [orderId], references: [id])
-  
   productName String
   quantity    Int
   price       Int
   modifiers   String?
 }
 
-// 9. Баннеры (Слайдер на главной)
+// 9. Баннеры
 model Banner {
   id        String   @id @default(cuid())
-  image     String   // Ссылка на фото
-  link      String?  // Ссылка куда ведет (опционально)
+  image     String
+  link      String?
   sortIndex Int      @default(0)
-  
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
-
   createdAt DateTime @default(now())
 }

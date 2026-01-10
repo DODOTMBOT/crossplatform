@@ -13,17 +13,20 @@ export const dynamic = "force-dynamic";
 export default async function TenantHome({ params }: { params: Promise<{ site: string }> }) {
   const { site } = await params;
 
+  // 1. Ищем Арендатора
   const tenant = await prisma.tenant.findUnique({
     where: { slug: site },
   });
 
   if (!tenant) return notFound();
 
+  // 2. Получаем Баннеры
   const banners = await prisma.banner.findMany({
     where: { tenantId: tenant.id },
     orderBy: { createdAt: "desc" }
   });
 
+  // 3. Получаем Категории и Товары
   const categories = await prisma.category.findMany({
     where: { tenantId: tenant.id },
     include: {
@@ -49,10 +52,10 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
 
       <CategoryNav categories={activeCategories} />
 
-      {/* Основной контейнер с отступами, задающий сетку */}
+      {/* Основной контент */}
       <div className="container mx-auto px-4 mt-12 space-y-16">
         
-        {/* Название ресторана - СЛЕВА (убрал text-center) */}
+        {/* Название ресторана */}
         <h1 className="text-4xl font-bold text-[#1C1C1C] mb-8">
           {tenant.name}
         </h1>
@@ -66,7 +69,7 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
           activeCategories.map((category: CategoryWithProducts) => (
             <section key={category.id} id={category.id} className="scroll-mt-32">
               
-              {/* Заголовок категории - СЛЕВА (убрал flex justify-center и text-center) */}
+              {/* Заголовок категории */}
               <h2 className="text-3xl font-bold mb-8 text-[#1C1C1C]">
                 {category.name}
               </h2>
@@ -75,9 +78,12 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
                 {category.products.map((product) => (
                   <ProductCard
                     key={product.id}
+                    id={product.id} // <--- ВАЖНО: Передаем ID
                     title={product.name}
                     price={product.price}
-                    weight={product.weight || ""}
+                    // <--- ВАЖНО: Логика отображения "Вес ИЛИ Объем"
+                    // Если есть weight, покажем его. Если нет - volume. Если ничего - пустую строку.
+                    weight={product.weight || product.volume || ""} 
                     image={product.image}
                     badge={product.badge}
                   />

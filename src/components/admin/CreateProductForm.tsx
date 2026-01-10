@@ -2,212 +2,118 @@
 
 import { createProduct } from "@/app/actions/products";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Category } from "@prisma/client";
 import { useState } from "react";
 
-// Интерфейс для категорий
-interface Category {
-  id: string;
-  name: string;
+interface Props {
+  categories: Category[];
+  tenantId: string;
 }
 
-export default function CreateProductForm({ categories, tenantId }: { categories: Category[], tenantId: string }) {
-  // Храним данные формы в состоянии
-  const [formData, setFormData] = useState({
-    name: "",
-    price: "",
-    categoryId: "",
-    weight: "",
-    description: "",
-    image: "",
-    badge: "",
-    sku: "",
-    iikoId: "",
-    calories: "",
-    proteins: "",
-    fats: "",
-    carbohydrates: "",
-    sortIndex: "0",
-    isAvailable: true,
-    isArchived: false,
-    isMarked: false,
-  });
-
-  const handleChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+export default function CreateProductForm({ categories, tenantId }: Props) {
+  const [measureType, setMeasureType] = useState("weight");
 
   return (
-    <div className="bg-white p-5 rounded-xl border shadow-sm h-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Добавить/Изменить</h2>
-        <div className={`px-2 py-1 rounded text-xs font-bold ${formData.isAvailable ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-          {formData.isAvailable ? "В МЕНЮ" : "СКРЫТО"}
-        </div>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Добавить товар</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form action={createProduct} className="space-y-6">
+          <input type="hidden" name="tenantId" value={tenantId} />
 
-      <form action={createProduct}>
-        {/* === ВАЖНО: Скрытые инпуты === */}
-        
-        {/* 1. Передаем ID ресторана (Самое главное!) */}
-        <input type="hidden" name="tenantId" value={tenantId} />
-
-        {/* 2. Передаем все поля из состояния */}
-        {Object.entries(formData).map(([key, value]) => (
-           <input key={key} type="hidden" name={key} value={String(value)} />
-        ))}
-        
-        {/* 3. Хак для чекбокса маркировки */}
-        <input type="hidden" name="isMarkedValue" value={formData.isMarked ? "on" : ""} />
-
-        <Tabs defaultValue="main" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
-            <TabsTrigger value="main">Основное</TabsTrigger>
-            <TabsTrigger value="props">Состав</TabsTrigger>
-            <TabsTrigger value="media">Вид</TabsTrigger>
-            <TabsTrigger value="tech">Настройки</TabsTrigger>
-          </TabsList>
-
-          {/* Вкладка 1: Основное */}
-          <TabsContent value="main" className="space-y-4">
-            <div className="grid grid-cols-1 gap-2">
-              <Label>Название блюда</Label>
-              <Input 
-                value={formData.name} 
-                onChange={(e) => handleChange("name", e.target.value)} 
-                placeholder="Например: Том Ям" 
-                required 
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Цена (₽)</Label>
-                <Input 
-                  type="number" 
-                  value={formData.price} 
-                  onChange={(e) => handleChange("price", e.target.value)} 
-                  placeholder="0" 
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Категория</Label>
-                <select 
-                  value={formData.categoryId}
-                  onChange={(e) => handleChange("categoryId", e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  required
-                >
-                  <option value="">Выбрать...</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
+          {/* 1. Название и Категория */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-               <Label>Вес / Объем</Label>
-               <Input 
-                 value={formData.weight} 
-                 onChange={(e) => handleChange("weight", e.target.value)} 
-                 placeholder="300 г / 0.5 л" 
-               />
+              <Label>Название товара</Label>
+              <Input name="name" required placeholder="Борщ" />
             </div>
-          </TabsContent>
+            <div className="space-y-2">
+              <Label>Категория</Label>
+              <select name="categoryId" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" required>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-          {/* Вкладка 2: Свойства и КБЖУ */}
-          <TabsContent value="props" className="space-y-4">
-             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                   <Label className="text-xs text-gray-500">Калории</Label>
-                   <Input type="number" placeholder="Ккал" value={formData.calories} onChange={(e) => handleChange("calories", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                   <Label className="text-xs text-gray-500">Белки</Label>
-                   <Input type="number" placeholder="г" value={formData.proteins} onChange={(e) => handleChange("proteins", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                   <Label className="text-xs text-gray-500">Жиры</Label>
-                   <Input type="number" placeholder="г" value={formData.fats} onChange={(e) => handleChange("fats", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                   <Label className="text-xs text-gray-500">Углеводы</Label>
-                   <Input type="number" placeholder="г" value={formData.carbohydrates} onChange={(e) => handleChange("carbohydrates", e.target.value)} />
-                </div>
+          {/* 2. Цена и Признак расчета */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Цена (₽)</Label>
+              <Input type="number" name="price" required placeholder="500" />
+            </div>
+            <div className="space-y-2">
+              <Label>Признак расчета</Label>
+              <select name="paymentSubject" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="COMMODITY">Товар</option>
+                <option value="EXCISE">Подакцизный товар</option>
+                <option value="SERVICE">Услуга</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 3. Вес ИЛИ Объем */}
+          <div className="space-y-2 bg-gray-50 p-4 rounded-lg">
+            <Label className="mb-2 block">Размер порции</Label>
+            <div className="flex gap-4 mb-2">
+               <label className="flex items-center gap-2 cursor-pointer">
+                 <input type="radio" name="measureType" value="weight" checked={measureType === "weight"} onChange={() => setMeasureType("weight")} /> Вес
+               </label>
+               <label className="flex items-center gap-2 cursor-pointer">
+                 <input type="radio" name="measureType" value="volume" checked={measureType === "volume"} onChange={() => setMeasureType("volume")} /> Объем
+               </label>
+            </div>
+            <Input name="measureValue" placeholder={measureType === "weight" ? "300 г" : "0.5 л"} />
+          </div>
+
+          {/* 4. КБЖУ */}
+          <div className="grid grid-cols-4 gap-2">
+            <div className="space-y-1"><Label>Ккал</Label><Input name="calories" type="number" step="0.1" /></div>
+            <div className="space-y-1"><Label>Белки</Label><Input name="proteins" type="number" step="0.1" /></div>
+            <div className="space-y-1"><Label>Жиры</Label><Input name="fats" type="number" step="0.1" /></div>
+            <div className="space-y-1"><Label>Угл.</Label><Input name="carbohydrates" type="number" step="0.1" /></div>
+          </div>
+
+          {/* 5. Медиа (Фото и Видео) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="space-y-2">
+               <Label>Фото (загрузка с компьютера)</Label>
+               <Input type="file" name="image" accept="image/*" />
              </div>
-          </TabsContent>
-
-          {/* Вкладка 3: Описание и Медиа */}
-          <TabsContent value="media" className="space-y-4">
-            <div className="space-y-2">
-               <Label>Ссылка на фото</Label>
-               <Input 
-                 value={formData.image} 
-                 onChange={(e) => handleChange("image", e.target.value)} 
-                 placeholder="https://..." 
-               />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Описание</Label>
-              <Textarea 
-                value={formData.description} 
-                onChange={(e) => handleChange("description", e.target.value)} 
-                placeholder="Состав, вкус, особенности..." 
-                className="h-24"
-              />
-            </div>
-
-            <div className="space-y-2">
-               <Label>Бейдж (Маркетинг)</Label>
-               <Input 
-                 value={formData.badge} 
-                 onChange={(e) => handleChange("badge", e.target.value)} 
-                 placeholder="HIT, NEW, SPICY" 
-               />
-            </div>
-          </TabsContent>
-
-          {/* Вкладка 4: Технические настройки */}
-          <TabsContent value="tech" className="space-y-4">
-             <div className="flex flex-col gap-4 bg-gray-50 p-3 rounded-md">
-                <div className="flex items-center justify-between">
-                   <Label>Товар доступен (Активен)</Label>
-                   <Switch checked={formData.isAvailable} onCheckedChange={(v) => handleChange("isAvailable", v)} />
-                </div>
-                <div className="flex items-center justify-between">
-                   <Label>В архиве</Label>
-                   <Switch checked={formData.isArchived} onCheckedChange={(v) => handleChange("isArchived", v)} />
-                </div>
-                <div className="flex items-center justify-between">
-                   <Label>Честный знак (Маркировка)</Label>
-                   <Switch checked={formData.isMarked} onCheckedChange={(v) => handleChange("isMarked", v)} />
-                </div>
+             <div className="space-y-2">
+               <Label>Видео (ссылка)</Label>
+               <Input name="video" placeholder="https://youtube.com/..." />
              </div>
+          </div>
 
-             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label>Сортировка</Label>
-                    <Input type="number" value={formData.sortIndex} onChange={(e) => handleChange("sortIndex", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Артикул</Label>
-                    <Input value={formData.sku} onChange={(e) => handleChange("sku", e.target.value)} />
-                </div>
-             </div>
-          </TabsContent>
-        </Tabs>
+          {/* 6. Описание */}
+          <div className="space-y-2">
+            <Label>Описание</Label>
+            <Textarea name="description" placeholder="Состав, особенности..." />
+          </div>
 
-        <Button type="submit" className="w-full mt-6 bg-[#C38C7F] hover:bg-[#A67366]">
-          Сохранить товар
-        </Button>
-      </form>
-    </div>
+          {/* Техническое */}
+          <div className="grid grid-cols-3 gap-4 border-t pt-4">
+             <div className="space-y-1"><Label>Артикул</Label><Input name="sku" /></div>
+             <div className="space-y-1"><Label>Сортировка</Label><Input name="sortIndex" type="number" defaultValue="0" /></div>
+             <div className="space-y-1"><Label>Бейдж</Label><Input name="badge" placeholder="Хит" /></div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input type="checkbox" name="isAvailable" id="isAvailable" defaultChecked className="w-4 h-4" />
+            <Label htmlFor="isAvailable">Товар доступен для заказа</Label>
+          </div>
+
+          <Button type="submit" className="w-full">Создать товар</Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

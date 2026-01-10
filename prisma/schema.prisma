@@ -16,7 +16,6 @@ model Tenant {
   primaryColor String   @default("#000000")
   isActive     Boolean  @default(true)
   
-  // Связи
   categories   Category[]
   products     Product[]
   orders       Order[]
@@ -29,10 +28,9 @@ model Tenant {
 model Category {
   id       String    @id @default(cuid())
   name     String
-  slug     String?   // Сделали опциональным для совместимости
+  slug     String?   
   order    Int       @default(0)
   
-  // Связь с арендатором (опционально, чтобы не ломать старый код)
   tenantId String?
   tenant   Tenant?    @relation(fields: [tenantId], references: [id])
   
@@ -44,16 +42,29 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String?
-  price       Int      // Цена в рублях (целое число)
+  price       Int      // Цена в рублях
   
-  // Поля, которых не хватало
-  weight      String?  
-  image       String?
-  createdAt   DateTime @default(now())
+  // --- НОВЫЕ ПОЛЯ ---
+  isAvailable Boolean  @default(true) // Активен
+  isArchived  Boolean  @default(false) // В архиве
+  sortIndex   Int      @default(0)     // Сортировка
+  badge       String?  // Хит, Новинка и т.д.
+
+  weight        String?  // Вес (300 г)
+  image         String?
   
-  isAvailable Boolean  @default(true)
-  badge       String?
-  
+  // КБЖУ
+  calories      Float? 
+  proteins      Float?
+  fats          Float?
+  carbohydrates Float?
+
+  // Технические
+  sku           String? // Артикул
+  iikoId        String? // ID в iiko
+  isMarked      Boolean @default(false) // Честный знак
+  // ------------------
+
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
   
@@ -61,6 +72,9 @@ model Product {
   tenant      Tenant?   @relation(fields: [tenantId], references: [id])
   
   modifierGroups ModifierGroup[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // 4. Группы модификаторов

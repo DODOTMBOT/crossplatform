@@ -7,15 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Арендатор
+// 1. Арендатор (Владелец заведения)
 model Tenant {
   id           String   @id @default(cuid())
   slug         String   @unique
   name         String
   logoUrl      String?
+  
+  // НОВОЕ ПОЛЕ: Фото шапки (Добавлено)
+  headerImage  String?  
+  
   primaryColor String   @default("#000000")
   isActive     Boolean  @default(true)
   
+  // Связи
   users        User[]
   categories   Category[]
   products     Product[]
@@ -56,7 +61,6 @@ model Product {
   description String?
   price       Int      // Цена в рублях
   
-  // --- НОВЫЕ ПОЛЯ ---
   // 1. Признак расчета: "COMMODITY" (Товар), "EXCISE" (Подакциз), "SERVICE" (Услуга)
   paymentSubject String @default("COMMODITY") 
 
@@ -65,8 +69,8 @@ model Product {
   volume        String?  // "0.5 л"
 
   // 3. Медиа
-  image         String?  // Ссылка на фото (загруженное)
-  video         String?  // Ссылка на видео (YouTube/URL)
+  image         String?  // Ссылка на фото
+  video         String?  // Ссылка на видео
 
   // 4. КБЖУ
   calories      Float? 
@@ -79,9 +83,9 @@ model Product {
   isArchived  Boolean  @default(false)
   sortIndex   Int      @default(0)
   badge       String?
-  sku           String?
-  iikoId        String?
-  isMarked      Boolean @default(false)
+  sku         String?
+  iikoId      String?
+  isMarked    Boolean @default(false)
 
   // Связи
   categoryId  String

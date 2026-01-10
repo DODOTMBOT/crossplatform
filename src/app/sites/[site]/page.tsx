@@ -40,43 +40,72 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
   });
 
   const activeCategories = categories.filter((cat) => cat.products.length > 0);
+  const hasHeaderImage = !!tenant.headerImage;
 
   return (
     <main className="min-h-screen pb-20 bg-white">
-      <Header />
-      <HeroSlider banners={banners} />
-      <CategoryNav categories={activeCategories} />
+      {/* 1. Навигация */}
+      <Header 
+        variant={hasHeaderImage ? "transparent" : "default"} 
+        siteName={tenant.name} 
+      />
+      
+      {/* 2. ФОТО ШАПКИ (Hero Image) */}
+      {hasHeaderImage && (
+        <div className="w-full relative">
+          <img 
+            src={tenant.headerImage!} 
+            alt="Header" 
+            // ИСПРАВЛЕНИЯ ЗДЕСЬ:
+            // h-[320px] - высота на мобильных
+            // md:h-[613px] - высота на ПК (строго как ваш баннер)
+            // object-cover - обрезает лишнее, заполняя пространство (не сплющивает)
+            // object-center - центрирует картинку
+            className="w-full h-[320px] md:h-[613px] object-cover object-center block" 
+          />
+        </div>
+      )}
 
-      <div className="container mx-auto px-4 mt-12 space-y-16">
-        <h1 className="text-4xl font-bold text-[#1C1C1C] mb-8">{tenant.name}</h1>
+      {/* Если фото нет, добавляем отступ сверху, иначе отступ не нужен */}
+      <div className={hasHeaderImage ? "" : "pt-24"}>
         
-        {activeCategories.length === 0 ? (
-          <div className="py-20 text-gray-500">
-            <p>Меню пока пустое 😔</p>
-            <p className="text-sm">Зайдите в админку и создайте товары.</p>
-          </div>
-        ) : (
-          activeCategories.map((category: CategoryWithProducts) => (
-            <section key={category.id} id={category.id} className="scroll-mt-32">
-              <h2 className="text-3xl font-bold mb-8 text-[#1C1C1C]">{category.name}</h2>
+        <HeroSlider banners={banners} />
+        <CategoryNav categories={activeCategories} />
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
-                {category.products.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    id={product.id}
-                    title={product.name}
-                    price={product.price}
-                    weight={product.weight || product.volume || ""}
-                    image={product.image}
-                    video={product.video} // <--- ВАЖНО: Передаем видео
-                    badge={product.badge}
-                  />
-                ))}
-              </div>
-            </section>
-          ))
-        )}
+        <div className="container mx-auto px-4 mt-12 space-y-16">
+          <h1 className="text-4xl font-bold text-[#1C1C1C] mb-8">
+            {tenant.name}
+          </h1>
+          
+          {activeCategories.length === 0 ? (
+            <div className="py-20 text-gray-500">
+              <p>Меню пока пустое 😔</p>
+              <p className="text-sm">Зайдите в админку и создайте товары.</p>
+            </div>
+          ) : (
+            activeCategories.map((category: CategoryWithProducts) => (
+              <section key={category.id} id={category.id} className="scroll-mt-32">
+                <h2 className="text-3xl font-bold mb-8 text-[#1C1C1C]">
+                  {category.name}
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+                  {category.products.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      id={product.id}
+                      title={product.name}
+                      price={product.price}
+                      weight={product.weight || product.volume || ""} 
+                      image={product.image}
+                      video={product.video}
+                      badge={product.badge}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))
+          )}
+        </div>
       </div>
     </main>
   );

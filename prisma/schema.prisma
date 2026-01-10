@@ -16,6 +16,8 @@ model Tenant {
   primaryColor String   @default("#000000")
   isActive     Boolean  @default(true)
   
+  // Связи
+  users        User[]   // <--- НОВОЕ: Администраторы ресторана
   categories   Category[]
   products     Product[]
   orders       Order[]
@@ -24,7 +26,24 @@ model Tenant {
   updatedAt    DateTime @updatedAt
 }
 
-// 2. Категории
+// 2. Пользователи (Администраторы) --- НОВАЯ МОДЕЛЬ ---
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Хэшированный пароль
+  name      String?
+  
+  // Роль: "ADMIN" (ресторатор) или "SUPERADMIN" (владелец платформы)
+  role      String   @default("ADMIN") 
+
+  // Привязка к ресторану (если null — значит это Супер-Админ платформы)
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// 3. Категории
 model Category {
   id       String    @id @default(cuid())
   name     String
@@ -37,19 +56,20 @@ model Category {
   products Product[]
 }
 
-// 3. Товары
+// 4. Товары
 model Product {
   id          String   @id @default(cuid())
   name        String
   description String?
   price       Int      // Цена в рублях
   
-  // --- НОВЫЕ ПОЛЯ ---
+  // Статусы
   isAvailable Boolean  @default(true) // Активен
   isArchived  Boolean  @default(false) // В архиве
   sortIndex   Int      @default(0)     // Сортировка
   badge       String?  // Хит, Новинка и т.д.
 
+  // Характеристики
   weight        String?  // Вес (300 г)
   image         String?
   
@@ -63,8 +83,8 @@ model Product {
   sku           String? // Артикул
   iikoId        String? // ID в iiko
   isMarked      Boolean @default(false) // Честный знак
-  // ------------------
 
+  // Связи
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
   
@@ -77,7 +97,7 @@ model Product {
   updatedAt   DateTime @updatedAt
 }
 
-// 4. Группы модификаторов
+// 5. Группы модификаторов
 model ModifierGroup {
   id           String   @id @default(cuid())
   name         String
@@ -90,7 +110,7 @@ model ModifierGroup {
   modifiers    Modifier[]
 }
 
-// 5. Модификаторы
+// 6. Модификаторы
 model Modifier {
   id              String        @id @default(cuid())
   name            String
@@ -100,7 +120,7 @@ model Modifier {
   modifierGroup   ModifierGroup @relation(fields: [modifierGroupId], references: [id])
 }
 
-// 6. Заказы
+// 7. Заказы
 model Order {
   id            String      @id @default(cuid())
   status        String      @default("PENDING")
@@ -117,7 +137,7 @@ model Order {
   createdAt     DateTime    @default(now())
 }
 
-// 7. Позиции заказа
+// 8. Позиции заказа
 model OrderItem {
   id          String  @id @default(cuid())
   orderId     String

@@ -10,18 +10,29 @@ interface ProductCardProps {
   price: number;
   weight: string;
   image?: string | null;
+  video?: string | null; // <--- Добавили проп video
   badge?: string | null;
 }
 
-export default function ProductCard({ id, title, price, weight, image, badge }: ProductCardProps) {
+export default function ProductCard({ id, title, price, weight, image, video, badge }: ProductCardProps) {
   return (
-    // ВАЖНО: Добавили scroll={false}, чтобы фон не прыгал вверх
     <Link href={`/product/${id}`} scroll={false} className="block group h-full">
       <div className="bg-white rounded-[20px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 h-full flex flex-col cursor-pointer">
         
-        {/* Картинка */}
+        {/* Медиа контейнер */}
         <div className="relative aspect-square overflow-hidden bg-gray-50">
-          {image ? (
+          
+          {/* ЛОГИКА: Если есть видео — показываем его, иначе фото, иначе заглушку */}
+          {video ? (
+            <video 
+              src={video} 
+              autoPlay 
+              muted 
+              loop 
+              playsInline 
+              className="w-full h-full object-cover"
+            />
+          ) : image ? (
             <img 
               src={image} 
               alt={title} 
@@ -34,7 +45,7 @@ export default function ProductCard({ id, title, price, weight, image, badge }: 
           )}
           
           {badge && (
-            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm">
+            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm z-10">
               {badge}
             </div>
           )}

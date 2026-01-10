@@ -3,7 +3,6 @@
 import { Product, ModifierGroup, Modifier } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 
-// Расширяем типы
 type ProductWithModifiers = Product & {
   modifierGroups: (ModifierGroup & {
     modifiers: Modifier[];
@@ -14,20 +13,23 @@ export default function ProductDetails({ product }: { product: ProductWithModifi
   return (
     <div className="flex flex-col md:grid md:grid-cols-2 h-full bg-white overflow-y-auto no-scrollbar">
       
-      {/* ЛЕВАЯ ЧАСТЬ: Фото */}
-      {/* 1. aspect-square: Делает блок строго квадратным.
-          2. min-h-[300px]: Минимальная высота, чтобы на мобилках не схлопывалось.
-          3. overflow-hidden: Чтобы фото не вылезало за скругления.
-      */}
+      {/* ЛЕВАЯ ЧАСТЬ: Медиа */}
       <div className="relative w-full aspect-square md:h-full bg-gray-50 flex items-center justify-center overflow-hidden">
-        {product.image ? (
+        
+        {/* ЛОГИКА: Видео > Фото > Заглушка */}
+        {product.video ? (
+            <video 
+              src={product.video} 
+              autoPlay 
+              muted 
+              loop 
+              playsInline 
+              className="w-full h-full object-cover"
+            />
+        ) : product.image ? (
           <img 
             src={product.image} 
             alt={product.name} 
-            // ИЗМЕНЕНИЯ:
-            // 1. w-full h-full: Растягиваем на весь блок
-            // 2. object-cover: Обрезаем лишнее, чтобы заполнить квадрат (не сплющиваем)
-            // 3. Убрали hover:scale-105 и transition-transform (нет анимации)
             className="w-full h-full object-cover" 
           />
         ) : (
@@ -80,7 +82,7 @@ export default function ProductDetails({ product }: { product: ProductWithModifi
           </div>
         )}
 
-        {/* Футер с кнопкой */}
+        {/* Футер */}
         <div className="mt-auto pt-6 border-t border-gray-100 bg-white sticky bottom-0">
           <Button className="w-full h-12 text-base font-bold rounded-xl bg-[#FF6900] hover:bg-[#E65E00] text-white shadow-lg shadow-orange-200 transition-all active:scale-[0.98]">
             Добавить за {product.price} ₽

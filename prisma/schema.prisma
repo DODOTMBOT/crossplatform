@@ -7,29 +7,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Арендатор (Владелец заведения)
+// 1. Арендатор
 model Tenant {
   id           String   @id @default(cuid())
   slug         String   @unique
   name         String
   logoUrl      String?
-  
-  // Фото шапки
   headerImage  String?  
-  
-  // Настройки шапки
-  headerStyle  String   @default("HERO")     // "HERO" (Баннер) или "SIMPLE" (Лого + Цвет)
-  headerColor  String   @default("#1C1C1C")  // Цвет фона для режима SIMPLE
-
+  headerStyle  String   @default("HERO")
+  headerColor  String   @default("#1C1C1C")
   primaryColor String   @default("#000000")
   isActive     Boolean  @default(true)
   
-  // Связи
   users        User[]
   categories   Category[]
   products     Product[]
   orders       Order[]
   banners      Banner[]
+  
+  // НОВОЕ: Библиотека топпингов арендатора
+  toppings     Topping[]
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -38,17 +35,13 @@ model Tenant {
 // 2. Пользователи
 model User {
   id        String   @id @default(cuid())
-  
   email     String?
   password  String?
   name      String?
   role      String   @default("USER") 
-  
   telegramId String? 
-
   tenantId  String?
   tenant    Tenant?  @relation(fields: [tenantId], references: [id])
-  
   createdAt DateTime @default(now())
 
   @@unique([email, tenantId])
@@ -71,51 +64,73 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String?
-  price       Int      // Базовая цена (или минимальная, если есть размеры)
-  
+  price       Int      
   paymentSubject String @default("COMMODITY") 
-
   weight        String?  
   volume        String?  
-
   image         String?  
   video         String?  
-
   calories      Float? 
   proteins      Float?
   fats          Float?
   carbohydrates Float?
-
-  isAvailable Boolean  @default(true)
-  isArchived  Boolean  @default(false)
-  sortIndex   Int      @default(0)
-  badge       String?
-  sku         String?
-  iikoId      String?
-  isMarked    Boolean @default(false)
-
+  isAvailable Boolean  @default(true) 
+  isArchived  Boolean  @default(false) 
+  sortIndex   Int      @default(0)     
+  badge       String?  
+  sku           String? 
+  iikoId        String? 
+  isMarked      Boolean @default(false) 
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
   tenantId    String?
   tenant      Tenant?   @relation(fields: [tenantId], references: [id])
   
   modifierGroups ModifierGroup[]
+  sizes          ProductSize[]
   
-  // НОВОЕ ПОЛЕ: Размеры
-  sizes       ProductSize[]
+  // НОВОЕ: Топпинги, доступные для этого товара
+  productToppings ProductTopping[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-// НОВАЯ МОДЕЛЬ: Размеры товара
 model ProductSize {
   id        String  @id @default(cuid())
-  name      String  // Например: "25 см", "30 см", "1 шт", "500 г"
-  price     Int     // Цена за этот размер
+  name      String 
+  price     Int     
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// --- НОВЫЕ МОДЕЛИ ДЛЯ ТОППИНГОВ ---
+
+// Библиотека топпингов (например, "Бекон", "Халапеньо")
+model Topping {
+  id        String   @id @default(cuid())
+  name      String
+  image     String   // Фото топпинга
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  
+  // Связи с товарами
+  products  ProductTopping[]
+  
+  createdAt DateTime @default(now())
+}
+
+// Связь товара и топпинга (здесь задается цена и вес для конкретного товара)
+model ProductTopping {
+  id        String  @id @default(cuid())
+  price     Int     // Цена добавки именно в этом товаре
+  weight    String? // Вес добавки (например, "30 г")
   
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  toppingId String
+  topping   Topping @relation(fields: [toppingId], references: [id], onDelete: Cascade)
 }
 
 // 5. Группы модификаторов
@@ -161,14 +176,13 @@ model OrderItem {
   quantity    Int
   price       Int
   modifiers   String?
-  // Можно добавить поле variantName, если нужно сохранять размер в заказе
 }
 
 // 9. Баннеры
 model Banner {
   id        String   @id @default(cuid())
-  image     String
-  link      String?
+  image     String   
+  link      String?  
   sortIndex Int      @default(0)
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])

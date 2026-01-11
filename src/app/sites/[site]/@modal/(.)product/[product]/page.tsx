@@ -10,8 +10,9 @@ export default async function InterceptedProductPage({ params }: { params: Promi
     where: { id: productId },
     include: { 
       modifierGroups: { include: { modifiers: true } },
-      // ДОБАВИЛИ ЗАГРУЗКУ РАЗМЕРОВ
-      sizes: { orderBy: { price: 'asc' } } 
+      sizes: { orderBy: { price: 'asc' } },
+      // ВАЖНО: Добавляем загрузку топпингов, чтобы не было ошибки
+      productToppings: { include: { topping: true } } 
     }
   });
 

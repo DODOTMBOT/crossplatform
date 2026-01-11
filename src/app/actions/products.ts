@@ -11,46 +11,55 @@ export async function getProducts(tenantId: string) {
     where: { tenantId },
     include: { 
       category: true,
-      sizes: { orderBy: { price: 'asc' } } // Подгружаем размеры
+      sizes: { orderBy: { price: 'asc' } },
+      // Подгружаем топпинги для товара
+      productToppings: { include: { topping: true } }
     },
     orderBy: { sortIndex: "asc" },
   });
 }
 
+// ... (функция saveFile без изменений) ...
 async function saveFile(file: File, folder: string = "uploads"): Promise<string> {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
   const fileName = `${Date.now()}-${file.name.replaceAll(" ", "_")}`;
   const uploadDir = join(process.cwd(), "public", folder);
-  
   await mkdir(uploadDir, { recursive: true });
   await writeFile(join(uploadDir, fileName), buffer);
-  
   return `/${folder}/${fileName}`;
 }
 
-// Хелпер для получения булевого значения
 const getBool = (formData: FormData, key: string) => {
   const val = formData.get(key);
   return val === "true" || val === "on";
 };
 
+// ... CREATE PRODUCT ...
 export async function createProduct(formData: FormData) {
   const tenantId = formData.get("tenantId") as string;
   if (!tenantId) throw new Error("Tenant ID is missing");
 
   const data = await processFormData(formData);
-  const sizesJson = formData.get("sizes") as string; // Получаем JSON строку размеров
+  const sizesJson = formData.get("sizes") as string;
+  const toppingsJson = formData.get("productToppings") as string; // JSON с выбранными топпингами
 
-  const product = await prisma.product.create({
+  await prisma.product.create({
     data: {
       tenantId,
       ...data,
-      // Создаем размеры, если они есть
       sizes: sizesJson ? {
         create: JSON.parse(sizesJson).map((s: any) => ({
           name: s.name,
           price: Number(s.price)
+        }))
+      } : undefined,
+      // Сохраняем связи с топпингами
+      productToppings: toppingsJson ? {
+        create: JSON.parse(toppingsJson).map((t: any) => ({
+          toppingId: t.toppingId,
+          price: Number(t.price),
+          weight: t.weight
         }))
       } : undefined
     },
@@ -60,36 +69,48 @@ export async function createProduct(formData: FormData) {
   revalidatePath("/");
 }
 
+// ... UPDATE PRODUCT ...
 export async function updateProduct(formData: FormData) {
   const id = formData.get("id") as string;
   if (!id) throw new Error("Product ID is missing");
 
   const data = await processFormData(formData);
   const sizesJson = formData.get("sizes") as string;
+  const toppingsJson = formData.get("productToppings") as string;
 
-  // 1. Обновляем основные данные продукта
   await prisma.product.update({
     where: { id },
     data: data,
   });
 
-  // 2. Обновляем размеры (стратегия: удалить старые, создать новые)
-  // Это проще и надежнее для списков, где нет сложной логики связей
+  // Обновление размеров (пересоздание)
   if (sizesJson) {
     const sizes = JSON.parse(sizesJson);
-    
-    // Удаляем все старые размеры
-    await prisma.productSize.deleteMany({
-      where: { productId: id }
-    });
-
-    // Создаем новые
+    await prisma.productSize.deleteMany({ where: { productId: id } });
     if (sizes.length > 0) {
       await prisma.productSize.createMany({
         data: sizes.map((s: any) => ({
           productId: id,
           name: s.name,
           price: Number(s.price)
+        }))
+      });
+    }
+  }
+
+  // Обновление топпингов (пересоздание связей)
+  if (toppingsJson) {
+    const toppings = JSON.parse(toppingsJson);
+    // Удаляем старые связи
+    await prisma.productTopping.deleteMany({ where: { productId: id } });
+    // Создаем новые
+    if (toppings.length > 0) {
+      await prisma.productTopping.createMany({
+        data: toppings.map((t: any) => ({
+          productId: id,
+          toppingId: t.toppingId,
+          price: Number(t.price),
+          weight: t.weight
         }))
       });
     }
@@ -105,6 +126,7 @@ export async function deleteProduct(id: string) {
   revalidatePath("/");
 }
 
+// ... (processFormData остается прежним) ...
 async function processFormData(formData: FormData) {
   const name = formData.get("name") as string;
   const price = Number(formData.get("price"));

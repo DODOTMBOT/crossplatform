@@ -18,8 +18,10 @@ export default async function ProductPage({ params }: { params: Promise<{ site: 
     where: { id: productId },
     include: { 
       modifierGroups: { include: { modifiers: true } },
-      // ВАЖНО: Подгружаем размеры для страницы товара
-      sizes: { orderBy: { price: "asc" } }
+      // Подгружаем размеры для страницы товара
+      sizes: { orderBy: { price: "asc" } },
+      // ВАЖНО: Подгружаем топпинги (связь + данные из библиотеки)
+      productToppings: { include: { topping: true } }
     }
   });
 

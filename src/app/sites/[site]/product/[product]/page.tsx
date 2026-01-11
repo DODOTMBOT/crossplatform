@@ -16,7 +16,11 @@ export default async function ProductPage({ params }: { params: Promise<{ site: 
 
   const productData = await prisma.product.findUnique({
     where: { id: productId },
-    include: { modifierGroups: { include: { modifiers: true } } }
+    include: { 
+      modifierGroups: { include: { modifiers: true } },
+      // ВАЖНО: Подгружаем размеры для страницы товара
+      sizes: { orderBy: { price: "asc" } }
+    }
   });
 
   if (!productData) return notFound();
@@ -28,6 +32,7 @@ export default async function ProductPage({ params }: { params: Promise<{ site: 
         siteName={tenant.name}
         backgroundColor={tenant.headerColor}
         logoUrl={tenant.logoUrl}
+        siteSlug={tenant.slug} // Передаем slug для кнопки входа
       />
       
       <div className="container mx-auto px-4 mt-24 max-w-4xl">

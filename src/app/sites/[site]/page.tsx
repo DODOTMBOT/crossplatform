@@ -4,9 +4,12 @@ import CategoryNav from "@/components/home/CategoryNav";
 import ProductCard from "@/components/home/ProductCard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { Category, Product } from "@prisma/client";
+import { Category, Product, ProductSize } from "@prisma/client";
 
-type CategoryWithProducts = Category & { products: Product[] };
+// Обновили тип: теперь продукт содержит массив размеров
+type CategoryWithProducts = Category & { 
+  products: (Product & { sizes: ProductSize[] })[] 
+};
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +36,9 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
           isArchived: false,
           tenantId: tenant.id 
         },
-        orderBy: { sortIndex: "asc" }
+        orderBy: { sortIndex: "asc" },
+        // ВАЖНО: Подгружаем размеры
+        include: { sizes: { orderBy: { price: "asc" } } }
       }
     },
     orderBy: { order: "asc" }
@@ -41,7 +46,6 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
 
   const activeCategories = categories.filter((cat) => cat.products.length > 0);
 
-  // ОПРЕДЕЛЯЕМ РЕЖИМ ШАПКИ
   const isHeroMode = tenant.headerStyle === "HERO" && !!tenant.headerImage;
 
   return (
@@ -52,7 +56,8 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
         variant={isHeroMode ? "transparent" : "default"}
         backgroundColor={tenant.headerColor} 
         logoUrl={tenant.logoUrl}
-        siteName={tenant.name} 
+        siteName={tenant.name}
+        siteSlug={tenant.slug} // Передаем slug для кнопки входа
       />
       
       {/* 2. БОЛЬШОЙ БАННЕР */}
@@ -99,6 +104,7 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
                       image={product.image}
                       video={product.video}
                       badge={product.badge}
+                      sizes={product.sizes} // Передаем размеры в карточку
                     />
                   ))}
                 </div>

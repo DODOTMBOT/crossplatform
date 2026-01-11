@@ -39,20 +39,20 @@ model Tenant {
 model User {
   id        String   @id @default(cuid())
   
-  // Убрали @unique, теперь email не уникален глобально
-  email     String   
-  
-  password  String
+  email     String?
+  password  String?
   name      String?
-  role      String   @default("ADMIN") 
+  role      String   @default("USER") 
   
+  telegramId String? 
+
   tenantId  String?
   tenant    Tenant?  @relation(fields: [tenantId], references: [id])
   
   createdAt DateTime @default(now())
 
-  // ВАЖНО: Email уникален только в рамках одного заведения (Tenant)
   @@unique([email, tenantId])
+  @@unique([telegramId, tenantId])
 }
 
 // 3. Категории
@@ -71,26 +71,21 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String?
-  price       Int      // Цена в рублях
+  price       Int      // Базовая цена (или минимальная, если есть размеры)
   
-  // 1. Признак расчета
   paymentSubject String @default("COMMODITY") 
 
-  // 2. Вес ИЛИ Объем
-  weight        String?  // "300 г"
-  volume        String?  // "0.5 л"
+  weight        String?  
+  volume        String?  
 
-  // 3. Медиа
-  image         String?  // Ссылка на фото
-  video         String?  // Ссылка на видео
+  image         String?  
+  video         String?  
 
-  // 4. КБЖУ
   calories      Float? 
   proteins      Float?
   fats          Float?
   carbohydrates Float?
 
-  // Статусы
   isAvailable Boolean  @default(true)
   isArchived  Boolean  @default(false)
   sortIndex   Int      @default(0)
@@ -99,15 +94,28 @@ model Product {
   iikoId      String?
   isMarked    Boolean @default(false)
 
-  // Связи
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
   tenantId    String?
   tenant      Tenant?   @relation(fields: [tenantId], references: [id])
+  
   modifierGroups ModifierGroup[]
+  
+  // НОВОЕ ПОЛЕ: Размеры
+  sizes       ProductSize[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// НОВАЯ МОДЕЛЬ: Размеры товара
+model ProductSize {
+  id        String  @id @default(cuid())
+  name      String  // Например: "25 см", "30 см", "1 шт", "500 г"
+  price     Int     // Цена за этот размер
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 // 5. Группы модификаторов
@@ -153,6 +161,7 @@ model OrderItem {
   quantity    Int
   price       Int
   modifiers   String?
+  // Можно добавить поле variantName, если нужно сохранять размер в заказе
 }
 
 // 9. Баннеры

@@ -9,7 +9,10 @@ export async function getProducts(tenantId: string) {
   if (!tenantId) return [];
   return await prisma.product.findMany({
     where: { tenantId },
-    include: { category: true },
+    include: { 
+      category: true,
+      sizes: { orderBy: { price: 'asc' } } // Подгружаем размеры
+    },
     orderBy: { sortIndex: "asc" },
   });
 }
@@ -26,16 +29,30 @@ async function saveFile(file: File, folder: string = "uploads"): Promise<string>
   return `/${folder}/${fileName}`;
 }
 
+// Хелпер для получения булевого значения
+const getBool = (formData: FormData, key: string) => {
+  const val = formData.get(key);
+  return val === "true" || val === "on";
+};
+
 export async function createProduct(formData: FormData) {
   const tenantId = formData.get("tenantId") as string;
   if (!tenantId) throw new Error("Tenant ID is missing");
 
   const data = await processFormData(formData);
+  const sizesJson = formData.get("sizes") as string; // Получаем JSON строку размеров
 
-  await prisma.product.create({
+  const product = await prisma.product.create({
     data: {
       tenantId,
-      ...data
+      ...data,
+      // Создаем размеры, если они есть
+      sizes: sizesJson ? {
+        create: JSON.parse(sizesJson).map((s: any) => ({
+          name: s.name,
+          price: Number(s.price)
+        }))
+      } : undefined
     },
   });
 
@@ -48,11 +65,35 @@ export async function updateProduct(formData: FormData) {
   if (!id) throw new Error("Product ID is missing");
 
   const data = await processFormData(formData);
+  const sizesJson = formData.get("sizes") as string;
 
+  // 1. Обновляем основные данные продукта
   await prisma.product.update({
     where: { id },
     data: data,
   });
+
+  // 2. Обновляем размеры (стратегия: удалить старые, создать новые)
+  // Это проще и надежнее для списков, где нет сложной логики связей
+  if (sizesJson) {
+    const sizes = JSON.parse(sizesJson);
+    
+    // Удаляем все старые размеры
+    await prisma.productSize.deleteMany({
+      where: { productId: id }
+    });
+
+    // Создаем новые
+    if (sizes.length > 0) {
+      await prisma.productSize.createMany({
+        data: sizes.map((s: any) => ({
+          productId: id,
+          name: s.name,
+          price: Number(s.price)
+        }))
+      });
+    }
+  }
 
   revalidatePath("/admin/products");
   revalidatePath("/");
@@ -63,12 +104,6 @@ export async function deleteProduct(id: string) {
   revalidatePath("/admin/products");
   revalidatePath("/");
 }
-
-// Хелпер для получения булевого значения
-const getBool = (formData: FormData, key: string) => {
-  const val = formData.get(key);
-  return val === "true" || val === "on";
-};
 
 async function processFormData(formData: FormData) {
   const name = formData.get("name") as string;
@@ -94,29 +129,23 @@ async function processFormData(formData: FormData) {
   let imagePath: string | undefined;
   let videoPath: string | undefined;
 
-  // Если загрузили новое фото -> сохраняем его и сбрасываем видео
   if (imageFile && imageFile.size > 0) {
     imagePath = await saveFile(imageFile);
-    videoPath = ""; // пустая строка удалит видео из базы
+    videoPath = ""; 
   }
 
-  // Если загрузили новое видео -> сохраняем его и сбрасываем фото
   if (videoFile && videoFile.size > 0) {
     videoPath = await saveFile(videoFile);
-    imagePath = ""; // пустая строка удалит фото из базы
+    imagePath = ""; 
   }
 
   const badge = formData.get("badge") as string;
   const sku = formData.get("sku") as string;
   const sortIndex = Number(formData.get("sortIndex") || 0);
   
-  // ИСПРАВЛЕНО: Теперь корректно читает true/false из скрытых инпутов
   const isAvailable = getBool(formData, "isAvailable");
   const isArchived = getBool(formData, "isArchived");
-  const isMarked = getBool(formData, "isMarkedValue"); // В форме поле называется isMarkedValue (хак для чекбокса) или просто isMarked в hidden
-  
-  // Доп. проверка, так как в hidden input мы пишем имя ключа из стейта
-  const isMarkedFinal = isMarked || getBool(formData, "isMarked");
+  const isMarked = getBool(formData, "isMarkedValue") || getBool(formData, "isMarked");
 
   const paymentSubject = formData.get("paymentSubject") as string || "COMMODITY";
 
@@ -137,7 +166,7 @@ async function processFormData(formData: FormData) {
     carbohydrates,
     isAvailable,
     isArchived,
-    isMarked: isMarkedFinal,
+    isMarked,
   };
 
   if (imagePath !== undefined) result.image = imagePath;

@@ -8,7 +8,11 @@ export default async function InterceptedProductPage({ params }: { params: Promi
 
   const productData = await prisma.product.findUnique({
     where: { id: productId },
-    include: { modifierGroups: { include: { modifiers: true } } }
+    include: { 
+      modifierGroups: { include: { modifiers: true } },
+      // ДОБАВИЛИ ЗАГРУЗКУ РАЗМЕРОВ
+      sizes: { orderBy: { price: 'asc' } } 
+    }
   });
 
   if (!productData) return notFound();

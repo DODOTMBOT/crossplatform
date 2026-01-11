@@ -8,15 +8,19 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash, Pencil, Plus, FileVideo, Image as ImageIcon, ArrowUpDown } from "lucide-react";
+import { Trash, Pencil, Plus, FileVideo, Image as ImageIcon, ArrowUpDown, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Category, Product } from "@prisma/client";
-import { cn } from "@/lib/utils"; // Убедитесь, что у вас есть этот утилитарный файл (стандартный для shadcn)
+import { Category, Product, ProductSize } from "@prisma/client";
+import { cn } from "@/lib/utils";
 
-type ProductWithCategory = Product & { category: Category | null };
+// Расширяем тип продукта
+type ProductWithDetails = Product & { 
+  category: Category | null;
+  sizes: ProductSize[];
+};
 
 interface Props {
-  products: ProductWithCategory[];
+  products: ProductWithDetails[];
   categories: Category[];
   tenantId: string;
 }
@@ -26,9 +30,15 @@ type SortConfig = {
   direction: "asc" | "desc";
 };
 
+type SizeItem = {
+  id?: string;
+  name: string;
+  price: string;
+};
+
 export default function ProductManager({ products, categories, tenantId }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "name", direction: "asc" }); // Сортировка по умолчанию
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "name", direction: "asc" });
 
   const initialFormState = {
     name: "",
@@ -47,14 +57,17 @@ export default function ProductManager({ products, categories, tenantId }: Props
     mediaType: "image",
     isAvailable: true,
     isArchived: false,
-    // isMarked удален
+    isMarked: false,
     paymentSubject: "COMMODITY"
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  
+  // Состояние для размеров
+  const [sizes, setSizes] = useState<SizeItem[]>([]);
+  
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  // --- СОРТИРОВКА ---
   const sortedProducts = useMemo(() => {
     const sorted = [...products];
     if (!sortConfig.key) return sorted;
@@ -87,15 +100,14 @@ export default function ProductManager({ products, categories, tenantId }: Props
     }));
   };
 
-  // --- ЛОГИКА ФОРМЫ ---
-
   const resetForm = () => {
     setEditingId(null);
     setFormData(initialFormState);
+    setSizes([]); // Сбрасываем размеры
     if (videoInputRef.current) videoInputRef.current.value = "";
   };
 
-  const handleEdit = (product: ProductWithCategory) => {
+  const handleEdit = (product: ProductWithDetails) => {
     setEditingId(product.id);
     setFormData({
       name: product.name,
@@ -114,8 +126,16 @@ export default function ProductManager({ products, categories, tenantId }: Props
       mediaType: product.video ? "video" : "image",
       isAvailable: product.isAvailable,
       isArchived: product.isArchived,
+      isMarked: product.isMarked,
       paymentSubject: product.paymentSubject
     });
+    
+    // Загружаем размеры
+    setSizes(product.sizes.map(s => ({
+      id: s.id,
+      name: s.name,
+      price: String(s.price)
+    })));
   };
 
   useEffect(() => {
@@ -145,23 +165,33 @@ export default function ProductManager({ products, categories, tenantId }: Props
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => {
       const newState = { ...prev, [field]: value };
-
-      // Логика взаимоисключения Активен/Архив
-      if (field === "isAvailable" && value === true) {
-        newState.isArchived = false;
-      }
-      if (field === "isArchived" && value === true) {
-        newState.isAvailable = false;
-      }
-
+      if (field === "isAvailable" && value === true) newState.isArchived = false;
+      if (field === "isArchived" && value === true) newState.isAvailable = false;
       return newState;
     });
+  };
+
+  // --- УПРАВЛЕНИЕ РАЗМЕРАМИ ---
+  const addSize = () => {
+    setSizes([...sizes, { name: "", price: "" }]);
+  };
+
+  const updateSize = (index: number, field: keyof SizeItem, value: string) => {
+    const newSizes = [...sizes];
+    newSizes[index] = { ...newSizes[index], [field]: value };
+    setSizes(newSizes);
+  };
+
+  const removeSize = (index: number) => {
+    const newSizes = [...sizes];
+    newSizes.splice(index, 1);
+    setSizes(newSizes);
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       
-      {/* ЛЕВАЯ КОЛОНКА: Список товаров */}
+      {/* ЛЕВАЯ КОЛОНКА */}
       <div className="bg-white rounded-xl border shadow-sm p-4 h-fit max-h-[calc(100vh-100px)] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-lg">Список блюд</h3>
@@ -172,15 +202,9 @@ export default function ProductManager({ products, categories, tenantId }: Props
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="cursor-pointer hover:text-black transition-colors" onClick={() => handleSort("name")}>
-                <div className="flex items-center gap-1">Блюдо <ArrowUpDown className="w-3 h-3" /></div>
-              </TableHead>
-              <TableHead className="cursor-pointer hover:text-black transition-colors" onClick={() => handleSort("category")}>
-                <div className="flex items-center gap-1">Категория <ArrowUpDown className="w-3 h-3" /></div>
-              </TableHead>
-              <TableHead className="text-right cursor-pointer hover:text-black transition-colors" onClick={() => handleSort("price")}>
-                <div className="flex items-center gap-1 justify-end">Price <ArrowUpDown className="w-3 h-3" /></div>
-              </TableHead>
+              <TableHead onClick={() => handleSort("name")} className="cursor-pointer">Блюдо</TableHead>
+              <TableHead onClick={() => handleSort("category")} className="cursor-pointer">Категория</TableHead>
+              <TableHead onClick={() => handleSort("price")} className="text-right cursor-pointer">Цена</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -190,29 +214,27 @@ export default function ProductManager({ products, categories, tenantId }: Props
                 key={product.id} 
                 className={cn(
                   editingId === product.id ? "bg-blue-50" : "",
-                  // Визуальное выделение скрытых (неактивных) товаров
                   !product.isAvailable ? "opacity-50 grayscale bg-gray-50/50" : ""
                 )}
               >
                 <TableCell className="py-3 font-medium">
                   {product.name}
-                  {!product.isAvailable && <span className="ml-2 text-[10px] text-red-500 font-bold border border-red-200 px-1 rounded">OFF</span>}
+                  {/* Показываем количество вариантов, если есть */}
+                  {product.sizes.length > 0 && <span className="ml-2 text-[10px] bg-gray-100 px-1 rounded text-gray-600">{product.sizes.length} вар.</span>}
                 </TableCell>
-                <TableCell className="text-xs text-gray-500">
-                  {product.category?.name || "—"}
+                <TableCell className="text-xs text-gray-500">{product.category?.name || "—"}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {product.sizes.length > 0 
+                    ? `от ${Math.min(...product.sizes.map(s => s.price))} ₽` 
+                    : `${product.price} ₽`}
                 </TableCell>
-                <TableCell className="text-right whitespace-nowrap">{product.price} ₽</TableCell>
                 <TableCell>
                   <div className="flex gap-1 justify-end">
-                    <Button 
-                      variant="ghost" size="icon" 
-                      className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-100"
-                      onClick={() => handleEdit(product)}
-                    >
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-700" onClick={() => handleEdit(product)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
                     <form action={deleteProduct.bind(null, product.id)}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500">
                           <Trash className="w-4 h-4" />
                       </Button>
                     </form>
@@ -224,29 +246,27 @@ export default function ProductManager({ products, categories, tenantId }: Props
         </Table>
       </div>
 
-      {/* ПРАВАЯ КОЛОНКА: Форма */}
+      {/* ПРАВАЯ КОЛОНКА */}
       <div className="lg:col-span-2 bg-white p-5 rounded-xl border shadow-sm h-full">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">
-            {editingId ? `Редактирование: ${formData.name}` : "Создание нового товара"}
+            {editingId ? `Редактирование` : "Создание товара"}
           </h2>
-          <div className={`px-3 py-1 rounded text-xs font-bold transition-colors ${
-            formData.isAvailable 
-              ? "bg-green-100 text-green-700" 
-              : formData.isArchived 
-                ? "bg-orange-100 text-orange-700"
-                : "bg-gray-100 text-gray-500"
-          }`}>
-            {formData.isAvailable ? "В МЕНЮ" : formData.isArchived ? "В АРХИВЕ" : "СКРЫТО"}
+          <div className={`px-3 py-1 rounded text-xs font-bold ${formData.isAvailable ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+            {formData.isAvailable ? "В МЕНЮ" : "СКРЫТО"}
           </div>
         </div>
 
         <form action={editingId ? updateProduct : createProduct}>
           <input type="hidden" name="tenantId" value={tenantId} />
           {editingId && <input type="hidden" name="id" value={editingId} />}
+          <input type="hidden" name="isMarkedValue" value={formData.isMarked ? "on" : ""} />
+          
+          {/* Передаем размеры как JSON */}
+          <input type="hidden" name="sizes" value={JSON.stringify(sizes)} />
           
           {Object.entries(formData).map(([key, value]) => (
-             key !== 'calories' && key !== 'proteins' && key !== 'fats' && key !== 'carbohydrates' && 
+             key !== 'calories' && key !== 'proteins' && key !== 'fats' && key !== 'carbohydrates' && key !== 'isMarked' &&
              <input key={key} type="hidden" name={key} value={String(value)} />
           ))}
 
@@ -258,59 +278,88 @@ export default function ProductManager({ products, categories, tenantId }: Props
               <TabsTrigger value="tech">Настройки</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="main" forceMount={true} hidden={false} className="space-y-4 data-[state=inactive]:hidden">
+            <TabsContent value="main" className="space-y-4">
               <div className="grid grid-cols-1 gap-2">
                 <Label>Название блюда</Label>
                 <Input value={formData.name} onChange={(e) => handleChange("name", e.target.value)} required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Цена (₽)</Label>
-                  <Input type="number" value={formData.price} onChange={(e) => handleChange("price", e.target.value)} required />
+              
+              <div className="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div className="flex justify-between items-center mb-2">
+                   <Label className="text-base font-semibold text-slate-800">Размеры и Вариации</Label>
+                   <Button type="button" size="sm" variant="outline" onClick={addSize}>+ Добавить вариант</Button>
                 </div>
-                <div className="space-y-2">
-                  <Label>Категория</Label>
-                  <select 
-                    value={formData.categoryId}
-                    onChange={(e) => handleChange("categoryId", e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    required
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
+                
+                {sizes.length === 0 ? (
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Цена (Базовая)</Label>
+                        <Input type="number" value={formData.price} onChange={(e) => handleChange("price", e.target.value)} placeholder="0" />
+                        <p className="text-xs text-gray-400">Укажите цену, если нет размеров.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Размер порции (Общее)</Label>
+                        <Input value={formData.measureValue} onChange={(e) => handleChange("measureValue", e.target.value)} placeholder="300 г" />
+                      </div>
+                   </div>
+                ) : (
+                   <div className="space-y-2">
+                      <p className="text-xs text-orange-600 mb-2 font-medium">Базовая цена будет игнорироваться в пользу цен вариантов.</p>
+                      {sizes.map((size, index) => (
+                        <div key={index} className="flex gap-2 items-center animate-in fade-in slide-in-from-top-1">
+                           <Input 
+                             placeholder="Название (25 см / S / 1 шт)" 
+                             value={size.name} 
+                             onChange={(e) => updateSize(index, "name", e.target.value)}
+                             className="flex-1"
+                           />
+                           <Input 
+                             type="number" 
+                             placeholder="Цена ₽" 
+                             value={size.price} 
+                             onChange={(e) => updateSize(index, "price", e.target.value)}
+                             className="w-24"
+                           />
+                           <Button type="button" variant="ghost" size="icon" onClick={() => removeSize(index)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
+                             <X className="w-4 h-4" />
+                           </Button>
+                        </div>
+                      ))}
+                   </div>
+                )}
               </div>
-              <div className="space-y-2 bg-gray-50 p-3 rounded">
-                 <Label className="mb-2 block">Размер порции</Label>
-                 <div className="flex gap-4 mb-2">
-                   <label className="flex items-center gap-2 cursor-pointer text-sm">
-                     <input type="radio" name="measureTypeGroup" checked={formData.measureType === "weight"} onChange={() => handleChange("measureType", "weight")} /> Вес
-                   </label>
-                   <label className="flex items-center gap-2 cursor-pointer text-sm">
-                     <input type="radio" name="measureTypeGroup" checked={formData.measureType === "volume"} onChange={() => handleChange("measureType", "volume")} /> Объем
-                   </label>
-                 </div>
-                 <Input value={formData.measureValue} onChange={(e) => handleChange("measureValue", e.target.value)} placeholder={formData.measureType === "weight" ? "300 г" : "0.5 л"} />
+
+              <div className="grid grid-cols-1 gap-2">
+                <Label>Категория</Label>
+                <select 
+                  value={formData.categoryId}
+                  onChange={(e) => handleChange("categoryId", e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
               </div>
             </TabsContent>
 
-            <TabsContent value="props" forceMount={true} className="space-y-4 data-[state=inactive]:hidden">
+            {/* Остальные вкладки (КБЖУ, Медиа, Настройки) остаются без изменений по логике, только копируем верстку */}
+            <TabsContent value="props" className="space-y-4">
                <div className="bg-blue-50 p-3 rounded-md mb-4 text-sm text-blue-700">
-                 💡 Калорийность рассчитывается автоматически
+                 💡 КБЖУ указывается на 100г или на порцию (как принято у вас).
                </div>
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                     <Label>Белки (г)</Label>
+                     <Label>Белки</Label>
                      <Input name="proteins" type="number" step="0.1" value={formData.proteins} onChange={(e) => handleChange("proteins", e.target.value)} />
                   </div>
                   <div className="space-y-1">
-                     <Label>Жиры (г)</Label>
+                     <Label>Жиры</Label>
                      <Input name="fats" type="number" step="0.1" value={formData.fats} onChange={(e) => handleChange("fats", e.target.value)} />
                   </div>
                   <div className="space-y-1">
-                     <Label>Углеводы (г)</Label>
+                     <Label>Углеводы</Label>
                      <Input name="carbohydrates" type="number" step="0.1" value={formData.carbohydrates} onChange={(e) => handleChange("carbohydrates", e.target.value)} />
                   </div>
                   <div className="space-y-1">
@@ -320,7 +369,7 @@ export default function ProductManager({ products, categories, tenantId }: Props
                </div>
             </TabsContent>
 
-            <TabsContent value="media" forceMount={true} className="space-y-4 data-[state=inactive]:hidden">
+            <TabsContent value="media" className="space-y-4">
               <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
                 <Button type="button" variant={formData.mediaType === "image" ? "default" : "ghost"} size="sm" onClick={() => handleChange("mediaType", "image")}>
                   <ImageIcon className="w-4 h-4 mr-2" /> Фото
@@ -350,17 +399,20 @@ export default function ProductManager({ products, categories, tenantId }: Props
               </div>
             </TabsContent>
 
-            <TabsContent value="tech" forceMount={true} className="space-y-4 data-[state=inactive]:hidden">
+            <TabsContent value="tech" className="space-y-4">
                <div className="flex flex-col gap-4 bg-gray-50 p-3 rounded-md">
                   <div className="flex items-center justify-between">
-                     <Label>Активен (В меню)</Label>
+                     <Label>Активен</Label>
                      <Switch checked={formData.isAvailable} onCheckedChange={(v) => handleChange("isAvailable", v)} />
                   </div>
                   <div className="flex items-center justify-between">
                      <Label>В архиве</Label>
                      <Switch checked={formData.isArchived} onCheckedChange={(v) => handleChange("isArchived", v)} />
                   </div>
-                  {/* ЧЕСТНЫЙ ЗНАК УБРАН ПО ЗАПРОСУ */}
+                  <div className="flex items-center justify-between">
+                     <Label>Честный знак</Label>
+                     <Switch checked={formData.isMarked} onCheckedChange={(v) => handleChange("isMarked", v)} />
+                  </div>
                </div>
                <div className="space-y-2">
                    <Label>Признак расчета</Label>

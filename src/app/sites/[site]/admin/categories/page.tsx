@@ -1,11 +1,11 @@
-import { createCategory, deleteCategory, getCategories } from "@/app/actions/categories";
+import { createCategory, getCategories } from "@/app/actions/categories";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash } from "lucide-react";
 import { notFound } from "next/navigation";
+import CategoryDeleteButton from "@/components/admin/CategoryDeleteButton"; // Импортируем новый компонент
 
 // Получаем параметры страницы (slug сайта)
 export default async function AdminCategoriesPage({ params }: { params: Promise<{ site: string }> }) {
@@ -69,11 +69,8 @@ export default async function AdminCategoriesPage({ params }: { params: Promise<
                       <TableCell className="text-gray-400 text-sm">{cat.slug}</TableCell>
                       <TableCell>{cat._count.products}</TableCell>
                       <TableCell className="text-right">
-                        <form action={deleteCategory.bind(null, cat.id)}>
-                          <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                            <Trash className="w-4 h-4" />
-                          </Button>
-                        </form>
+                        {/* ИСПОЛЬЗУЕМ НОВЫЙ КОМПОНЕНТ ВМЕСТО ФОРМЫ */}
+                        <CategoryDeleteButton id={cat.id} />
                       </TableCell>
                     </TableRow>
                   ))

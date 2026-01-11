@@ -8,7 +8,7 @@ export async function getCategories(tenantId: string) {
   if (!tenantId) return [];
 
   return await prisma.category.findMany({
-    where: { tenantId: tenantId }, // <--- ОБЯЗАТЕЛЬНЫЙ ФИЛЬТР
+    where: { tenantId: tenantId },
     orderBy: { order: "asc" },
     include: { _count: { select: { products: true } } }
   });
@@ -24,7 +24,7 @@ export async function createCategory(formData: FormData) {
 
   await prisma.category.create({
     data: {
-      tenantId, // <--- ПРИВЯЗКА К РЕСТОРАНУ
+      tenantId,
       name,
       slug,
       order: 0, 
@@ -37,8 +37,20 @@ export async function createCategory(formData: FormData) {
 
 // 3. Удалить категорию (безопасно)
 export async function deleteCategory(id: string) {
-  // В идеале здесь тоже нужно проверять tenantId, но пока оставим так
-  await prisma.category.delete({ where: { id } });
-  revalidatePath("/admin/categories");
-  revalidatePath("/admin/products");
+  try {
+    await prisma.category.delete({ where: { id } });
+    revalidatePath("/admin/categories");
+    revalidatePath("/admin/products");
+    return { success: true };
+  } catch (error: any) {
+    // Код P2003 в Prisma означает нарушение внешнего ключа (есть связанные записи)
+    // Также проверяем текст ошибки на всякий случай
+    if (error.code === 'P2003' || error.message?.includes('foreign key constraint')) {
+        return { 
+            success: false, 
+            error: "Сначала удалите все товары из этой категории, потом можно будет удалить категорию." 
+        };
+    }
+    return { success: false, error: "Произошла ошибка при удалении." };
+  }
 }

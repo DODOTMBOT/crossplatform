@@ -8,13 +8,15 @@ interface HeaderProps {
   backgroundColor?: string; 
   logoUrl?: string | null;
   siteName?: string;
+  siteSlug?: string; // <-- Добавили (можно сделать необязательным ?)
 }
 
 export default function Header({ 
   variant = "default", 
   backgroundColor = "#1C1C1C", 
   logoUrl, 
-  siteName = "ZDRASTE" 
+  siteName = "ZDRASTE",
+  siteSlug // Принимаем, даже если не используем прямо в верстке (или используем для ссылок)
 }: HeaderProps) {
   
   const isTransparent = variant === "transparent";
@@ -55,12 +57,16 @@ export default function Header({
         
         {/* Правая часть */}
         <div className="flex items-center gap-2">
-          {/* ССЫЛКА НА ВХОД (Исправлено) */}
-          <Link href="/admin/login">
-            <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full hidden sm:flex">
+          <Button 
+            variant="ghost" 
+            className="text-white hover:bg-white/10 rounded-full hidden sm:flex"
+            asChild
+          >
+            {/* Ссылка на вход. Middleware сам поймет, что это админка текущего сайта */}
+            <Link href="/admin/login" scroll={false}>
               <User className="w-5 h-5 mr-2" /> Войти
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
           <Button className="bg-white text-black hover:bg-gray-200 rounded-full px-4">
             <ShoppingBag className="w-5 h-5 mr-2" /> 0 ₽

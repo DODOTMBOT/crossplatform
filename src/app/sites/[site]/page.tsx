@@ -42,8 +42,6 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
   const activeCategories = categories.filter((cat) => cat.products.length > 0);
 
   // ОПРЕДЕЛЯЕМ РЕЖИМ ШАПКИ
-  // Если выбран стиль HERO и есть картинка -> Transparent Header + Big Image
-  // Иначе -> Colored Header (Simple)
   const isHeroMode = tenant.headerStyle === "HERO" && !!tenant.headerImage;
 
   return (
@@ -52,12 +50,12 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
       {/* 1. ШАПКА */}
       <Header 
         variant={isHeroMode ? "transparent" : "default"}
-        backgroundColor={tenant.headerColor} // Работает только если variant="default"
+        backgroundColor={tenant.headerColor} 
         logoUrl={tenant.logoUrl}
         siteName={tenant.name} 
       />
       
-      {/* 2. БОЛЬШОЙ БАННЕР (Показываем только в режиме HERO) */}
+      {/* 2. БОЛЬШОЙ БАННЕР */}
       {isHeroMode && (
         <div className="w-full relative">
           <img 
@@ -69,7 +67,6 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
       )}
 
       {/* 3. КОНТЕНТ */}
-      {/* Если режима HERO нет, добавляем отступ сверху, чтобы не залезть под шапку */}
       <div className={isHeroMode ? "" : "pt-24"}>
         
         <HeroSlider banners={banners} />

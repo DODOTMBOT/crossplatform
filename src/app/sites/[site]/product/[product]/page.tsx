@@ -21,15 +21,13 @@ export default async function ProductPage({ params }: { params: Promise<{ site: 
 
   if (!productData) return notFound();
 
-  // На внутренней странице товара можно не показывать огромное фото шапки, 
-  // или показывать. Сделаем стандартную черную шапку для удобства чтения.
-  // Если хотите фото - поменяйте variant="default" на логику как в page.tsx
-
   return (
     <main className="min-h-screen bg-gray-50 pb-20">
       <Header 
         variant="default" 
         siteName={tenant.name}
+        backgroundColor={tenant.headerColor}
+        logoUrl={tenant.logoUrl}
       />
       
       <div className="container mx-auto px-4 mt-24 max-w-4xl">

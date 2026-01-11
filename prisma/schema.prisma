@@ -12,17 +12,14 @@ model Tenant {
   id           String   @id @default(cuid())
   slug         String   @unique
   name         String
-  
-  // Логотип (для варианта "Логотип + Цвет")
   logoUrl      String?
   
-  // Фото шапки (для варианта "Большой баннер")
+  // Фото шапки
   headerImage  String?  
   
-  // --- НОВЫЕ ПОЛЯ ДЛЯ НАСТРОЙКИ ШАПКИ ---
+  // Настройки шапки
   headerStyle  String   @default("HERO")     // "HERO" (Баннер) или "SIMPLE" (Лого + Цвет)
   headerColor  String   @default("#1C1C1C")  // Цвет фона для режима SIMPLE
-  // ---------------------------------------
 
   primaryColor String   @default("#000000")
   isActive     Boolean  @default(true)
@@ -41,13 +38,21 @@ model Tenant {
 // 2. Пользователи
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
+  
+  // Убрали @unique, теперь email не уникален глобально
+  email     String   
+  
   password  String
   name      String?
   role      String   @default("ADMIN") 
+  
   tenantId  String?
   tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  
   createdAt DateTime @default(now())
+
+  // ВАЖНО: Email уникален только в рамках одного заведения (Tenant)
+  @@unique([email, tenantId])
 }
 
 // 3. Категории

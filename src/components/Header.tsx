@@ -1,10 +1,11 @@
 import { Menu, User, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface HeaderProps {
-  variant?: "default" | "transparent"; // default = цветной, transparent = прозрачный
-  backgroundColor?: string; // Цвет для default режима
+  variant?: "default" | "transparent"; 
+  backgroundColor?: string; 
   logoUrl?: string | null;
   siteName?: string;
 }
@@ -22,7 +23,6 @@ export default function Header({
     <header 
       className={cn(
         "top-0 left-0 right-0 z-50 py-3 px-4 transition-all",
-        // Если прозрачный - absolute (поверх фото). Если цветной - fixed (липкий)
         isTransparent ? "absolute bg-transparent" : "fixed shadow-lg rounded-b-[24px]"
       )}
       style={{
@@ -44,7 +44,7 @@ export default function Header({
             <img 
               src={logoUrl} 
               alt={siteName} 
-              className="h-10 w-auto object-contain" // Ограничиваем высоту логотипа
+              className="h-10 w-auto object-contain" 
             />
           ) : (
             <div className="text-lg font-bold tracking-wide text-white drop-shadow-md">
@@ -53,11 +53,15 @@ export default function Header({
           )}
         </div>
         
-        {/* Правая часть (Профиль и Корзина) */}
+        {/* Правая часть */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full hidden sm:flex">
-            <User className="w-5 h-5 mr-2" /> Войти
-          </Button>
+          {/* ССЫЛКА НА ВХОД (Исправлено) */}
+          <Link href="/admin/login">
+            <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full hidden sm:flex">
+              <User className="w-5 h-5 mr-2" /> Войти
+            </Button>
+          </Link>
+
           <Button className="bg-white text-black hover:bg-gray-200 rounded-full px-4">
             <ShoppingBag className="w-5 h-5 mr-2" /> 0 ₽
           </Button>

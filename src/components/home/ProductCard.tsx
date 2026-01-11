@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image"; // Импортируем Image
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductSize } from "@prisma/client";
@@ -13,12 +14,10 @@ interface ProductCardProps {
   image?: string | null;
   video?: string | null;
   badge?: string | null;
-  sizes?: ProductSize[]; // Добавили размеры
+  sizes?: ProductSize[];
 }
 
 export default function ProductCard({ id, title, price, weight, image, video, badge, sizes = [] }: ProductCardProps) {
-  
-  // Вычисляем минимальную цену
   const minPrice = sizes.length > 0 ? Math.min(...sizes.map(s => s.price)) : price;
   const displayPrice = sizes.length > 0 ? `от ${minPrice} ₽` : `${price} ₽`;
 
@@ -30,7 +29,14 @@ export default function ProductCard({ id, title, price, weight, image, video, ba
           {video ? (
             <video src={video} autoPlay muted loop playsInline className="w-full h-full object-cover" />
           ) : image ? (
-            <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            // ИСПОЛЬЗУЕМ IMAGE
+            <Image 
+              src={image} 
+              alt={title} 
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-300">Нет фото</div>
           )}

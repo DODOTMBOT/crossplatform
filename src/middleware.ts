@@ -10,24 +10,31 @@ export const config = {
 export default async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const hostname = req.headers.get("host") || "localhost:3000";
-  const rootDomain = process.env.NODE_ENV === "development" ? "localhost:3000" : "ваш-домен.рф";
-  const currentHost = hostname.replace(`.${rootDomain}`, "");
-
-  // 1. Обработка субдоменов
-  const isSubdomain = currentHost !== "localhost:3000" && currentHost !== rootDomain;
+  
+  // Берем домен из env или ставим локалхост
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost:3000";
+  
+  // Логика определения субдомена
+  // Если зашли на dodo.prsmx.ru -> currentHost = "dodo"
+  // Если зашли на prsmx.ru -> currentHost = "prsmx.ru" (не субдомен)
+  let currentHost = hostname;
+  if (hostname.includes(rootDomain)) {
+      currentHost = hostname.replace(`.${rootDomain}`, "");
+  }
+  
+  // Проверяем, это субдомен или основной сайт
+  const isSubdomain = hostname !== rootDomain && hostname !== "localhost:3000" && currentHost !== hostname;
 
   if (isSubdomain) {
-    // ЗАЩИТА АДМИНКИ
+    // === ЗАЩИТА АДМИНКИ РЕСТОРАНА ===
     if (url.pathname.startsWith("/admin") && !url.pathname.includes("/login")) {
       const session = req.cookies.get("session")?.value;
       
-      // Если нет сессии — редирект на логин
       if (!session) {
-        url.pathname = `/admin/login`; // Относительный путь для субдомена
+        url.pathname = `/admin/login`; 
         return NextResponse.redirect(url);
       }
 
-      // Проверка валидности токена
       try {
         await jwtVerify(session, JWT_SECRET);
       } catch (error) {
@@ -36,7 +43,8 @@ export default async function middleware(req: NextRequest) {
       }
     }
 
-    // Переписываем путь для роутера
+    // Переписываем путь, чтобы Next.js показал папку /sites/[site]
+    // dodo.prsmx.ru/about -> /sites/dodo/about
     url.pathname = `/sites/${currentHost}${url.pathname}`;
     return NextResponse.rewrite(url);
   }

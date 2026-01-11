@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { getSession } from "@/lib/session"; // Импортируем проверку сессии
 
+// --- GET PRODUCTS ---
 export async function getProducts(tenantId: string) {
   if (!tenantId) return [];
   return await prisma.product.findMany({
@@ -12,14 +14,13 @@ export async function getProducts(tenantId: string) {
     include: { 
       category: true,
       sizes: { orderBy: { price: 'asc' } },
-      // Подгружаем топпинги для товара
       productToppings: { include: { topping: true } }
     },
     orderBy: { sortIndex: "asc" },
   });
 }
 
-// ... (функция saveFile без изменений) ...
+// --- FILE SAVE HELPER ---
 async function saveFile(file: File, folder: string = "uploads"): Promise<string> {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
@@ -35,14 +36,23 @@ const getBool = (formData: FormData, key: string) => {
   return val === "true" || val === "on";
 };
 
-// ... CREATE PRODUCT ...
+// --- CREATE PRODUCT ---
 export async function createProduct(formData: FormData) {
+  // 1. Проверка авторизации
+  const session = await getSession();
+  if (!session) throw new Error("Не авторизован");
+
   const tenantId = formData.get("tenantId") as string;
   if (!tenantId) throw new Error("Tenant ID is missing");
 
+  // 2. Проверка прав доступа к конкретному ресторану
+  if (session.tenantId !== tenantId && session.role !== "ADMIN") {
+     throw new Error("Нет доступа к этому ресторану");
+  }
+
   const data = await processFormData(formData);
   const sizesJson = formData.get("sizes") as string;
-  const toppingsJson = formData.get("productToppings") as string; // JSON с выбранными топпингами
+  const toppingsJson = formData.get("productToppings") as string;
 
   await prisma.product.create({
     data: {
@@ -54,7 +64,6 @@ export async function createProduct(formData: FormData) {
           price: Number(s.price)
         }))
       } : undefined,
-      // Сохраняем связи с топпингами
       productToppings: toppingsJson ? {
         create: JSON.parse(toppingsJson).map((t: any) => ({
           toppingId: t.toppingId,
@@ -69,10 +78,22 @@ export async function createProduct(formData: FormData) {
   revalidatePath("/");
 }
 
-// ... UPDATE PRODUCT ...
+// --- UPDATE PRODUCT ---
 export async function updateProduct(formData: FormData) {
+  // 1. Проверка авторизации
+  const session = await getSession();
+  if (!session) throw new Error("Не авторизован");
+
   const id = formData.get("id") as string;
   if (!id) throw new Error("Product ID is missing");
+
+  // 2. Проверка владельца товара
+  const existingProduct = await prisma.product.findUnique({ where: { id } });
+  if (!existingProduct) throw new Error("Товар не найден");
+  
+  if (existingProduct.tenantId !== session.tenantId && session.role !== "ADMIN") {
+      throw new Error("Доступ запрещен");
+  }
 
   const data = await processFormData(formData);
   const sizesJson = formData.get("sizes") as string;
@@ -83,7 +104,7 @@ export async function updateProduct(formData: FormData) {
     data: data,
   });
 
-  // Обновление размеров (пересоздание)
+  // Обновление размеров (полная перезапись)
   if (sizesJson) {
     const sizes = JSON.parse(sizesJson);
     await prisma.productSize.deleteMany({ where: { productId: id } });
@@ -98,12 +119,10 @@ export async function updateProduct(formData: FormData) {
     }
   }
 
-  // Обновление топпингов (пересоздание связей)
+  // Обновление топпингов (полная перезапись связей)
   if (toppingsJson) {
     const toppings = JSON.parse(toppingsJson);
-    // Удаляем старые связи
     await prisma.productTopping.deleteMany({ where: { productId: id } });
-    // Создаем новые
     if (toppings.length > 0) {
       await prisma.productTopping.createMany({
         data: toppings.map((t: any) => ({
@@ -120,13 +139,26 @@ export async function updateProduct(formData: FormData) {
   revalidatePath("/");
 }
 
+// --- DELETE PRODUCT ---
 export async function deleteProduct(id: string) {
+  // 1. Проверка авторизации
+  const session = await getSession();
+  if (!session) throw new Error("Не авторизован");
+
+  // 2. Проверка владельца товара
+  const existingProduct = await prisma.product.findUnique({ where: { id } });
+  if (!existingProduct) return; // Уже удален или не существует
+
+  if (existingProduct.tenantId !== session.tenantId && session.role !== "ADMIN") {
+      throw new Error("Доступ запрещен");
+  }
+
   await prisma.product.delete({ where: { id } });
   revalidatePath("/admin/products");
   revalidatePath("/");
 }
 
-// ... (processFormData остается прежним) ...
+// --- FORM DATA PROCESSING ---
 async function processFormData(formData: FormData) {
   const name = formData.get("name") as string;
   const price = Number(formData.get("price"));
@@ -153,11 +185,13 @@ async function processFormData(formData: FormData) {
 
   if (imageFile && imageFile.size > 0) {
     imagePath = await saveFile(imageFile);
+    // Если загрузили фото, видео затираем (логика переключателя)
     videoPath = ""; 
   }
 
   if (videoFile && videoFile.size > 0) {
     videoPath = await saveFile(videoFile);
+    // Если загрузили видео, фото затираем
     imagePath = ""; 
   }
 

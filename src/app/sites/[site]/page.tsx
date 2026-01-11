@@ -40,34 +40,37 @@ export default async function TenantHome({ params }: { params: Promise<{ site: s
   });
 
   const activeCategories = categories.filter((cat) => cat.products.length > 0);
-  const hasHeaderImage = !!tenant.headerImage;
+
+  // ОПРЕДЕЛЯЕМ РЕЖИМ ШАПКИ
+  // Если выбран стиль HERO и есть картинка -> Transparent Header + Big Image
+  // Иначе -> Colored Header (Simple)
+  const isHeroMode = tenant.headerStyle === "HERO" && !!tenant.headerImage;
 
   return (
     <main className="min-h-screen pb-20 bg-white">
-      {/* 1. Навигация */}
+      
+      {/* 1. ШАПКА */}
       <Header 
-        variant={hasHeaderImage ? "transparent" : "default"} 
+        variant={isHeroMode ? "transparent" : "default"}
+        backgroundColor={tenant.headerColor} // Работает только если variant="default"
+        logoUrl={tenant.logoUrl}
         siteName={tenant.name} 
       />
       
-      {/* 2. ФОТО ШАПКИ (Hero Image) */}
-      {hasHeaderImage && (
+      {/* 2. БОЛЬШОЙ БАННЕР (Показываем только в режиме HERO) */}
+      {isHeroMode && (
         <div className="w-full relative">
           <img 
             src={tenant.headerImage!} 
             alt="Header" 
-            // ИСПРАВЛЕНИЯ ЗДЕСЬ:
-            // h-[320px] - высота на мобильных
-            // md:h-[613px] - высота на ПК (строго как ваш баннер)
-            // object-cover - обрезает лишнее, заполняя пространство (не сплющивает)
-            // object-center - центрирует картинку
             className="w-full h-[320px] md:h-[613px] object-cover object-center block" 
           />
         </div>
       )}
 
-      {/* Если фото нет, добавляем отступ сверху, иначе отступ не нужен */}
-      <div className={hasHeaderImage ? "" : "pt-24"}>
+      {/* 3. КОНТЕНТ */}
+      {/* Если режима HERO нет, добавляем отступ сверху, чтобы не залезть под шапку */}
+      <div className={isHeroMode ? "" : "pt-24"}>
         
         <HeroSlider banners={banners} />
         <CategoryNav categories={activeCategories} />

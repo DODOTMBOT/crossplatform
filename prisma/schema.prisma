@@ -12,11 +12,18 @@ model Tenant {
   id           String   @id @default(cuid())
   slug         String   @unique
   name         String
+  
+  // Логотип (для варианта "Логотип + Цвет")
   logoUrl      String?
   
-  // НОВОЕ ПОЛЕ: Фото шапки (Добавлено)
+  // Фото шапки (для варианта "Большой баннер")
   headerImage  String?  
   
+  // --- НОВЫЕ ПОЛЯ ДЛЯ НАСТРОЙКИ ШАПКИ ---
+  headerStyle  String   @default("HERO")     // "HERO" (Баннер) или "SIMPLE" (Лого + Цвет)
+  headerColor  String   @default("#1C1C1C")  // Цвет фона для режима SIMPLE
+  // ---------------------------------------
+
   primaryColor String   @default("#000000")
   isActive     Boolean  @default(true)
   
@@ -61,7 +68,7 @@ model Product {
   description String?
   price       Int      // Цена в рублях
   
-  // 1. Признак расчета: "COMMODITY" (Товар), "EXCISE" (Подакциз), "SERVICE" (Услуга)
+  // 1. Признак расчета
   paymentSubject String @default("COMMODITY") 
 
   // 2. Вес ИЛИ Объем
